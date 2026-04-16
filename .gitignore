@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.py.class
+*.cover
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+.pyre/
+.python-version
+
+# Virtual environment
+venv/
+ENV/
+env/
+.venv/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.nbconvert.ipynb
+
+# Data files
+data/raw/
+data/processed/
+*.csv
+*.tsv
+*.parquet
+*.feather
+*.h5
+
+# Logs and reports
+*.log
+logs/
+reports/
+
+# IDE / editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# macOS
+.DS_Store
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Local environment files
+.env
+.env.*
+
+# Database
+*.sqlite3
+
+# System files
+Thumbs.db
