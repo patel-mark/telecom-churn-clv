@@ -1,38 +1,33 @@
--- CRM Demographics
-CREATE TABLE crm_demographics (
+-- Create core tables for raw telecom data
+CREATE TABLE IF NOT EXISTS crm_demographics (
     customer_id VARCHAR(50) PRIMARY KEY,
     age INT,
     gender VARCHAR(10),
     location_region VARCHAR(50),
-    tenure_months INT,
-    contract_type VARCHAR(20)
+    contract_type VARCHAR(20),
+    tenure_months INT
 );
 
--- Recharge Patterns
-CREATE TABLE recharge_patterns (
-    transaction_id SERIAL PRIMARY KEY,
-    customer_id VARCHAR(50) REFERENCES crm_demographics(customer_id),
-    recharge_date DATE,
-    amount DECIMAL(10, 2),
-    payment_method VARCHAR(30)
-);
-
--- Call Detail Records (CDRs)
-CREATE TABLE cdr_logs (
+CREATE TABLE IF NOT EXISTS cdr_logs (
     log_id SERIAL PRIMARY KEY,
-    customer_id VARCHAR(50) REFERENCES crm_demographics(customer_id),
-    call_date TIMESTAMP,
-    duration_minutes DECIMAL(10, 2),
-    call_type VARCHAR(20), -- e.g., On-net, Off-net, International
+    customer_id VARCHAR(50),
+    call_date DATE,
+    duration_minutes FLOAT,
     dropped_call BOOLEAN
 );
 
--- Prediction Output (For Tableau later)
-CREATE TABLE prediction_outputs (
-    prediction_id SERIAL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS recharge_patterns (
+    recharge_id SERIAL PRIMARY KEY,
+    customer_id VARCHAR(50),
+    recharge_date DATE,
+    amount DECIMAL
+);
+
+-- Create the output table that Tableau will read from
+CREATE TABLE IF NOT EXISTS prediction_outputs (
     customer_id VARCHAR(50),
     prediction_date DATE,
-    churn_probability DECIMAL(5, 4),
-    predicted_clv DECIMAL(10, 2),
-    top_risk_factor VARCHAR(100)
+    churn_probability FLOAT,
+    predicted_clv DECIMAL,
+    top_risk_factor VARCHAR(50)
 );

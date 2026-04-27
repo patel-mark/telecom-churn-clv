@@ -1,54 +1,59 @@
 import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
-import joblib
 import shap
-import warnings
 import datetime
-warnings.filterwarnings('ignore')
+import warnings
+import joblib
 
-# --- CONFIGURATION ---
+# -- MLFLOW IMPORTS --
+import mlflow
+from mlflow.tracking import MlflowClient
+
+warnings.filterwarnings('ignore')
 DB_URI = "postgresql://postgres:SecurePassword@localhost:5432/telecom_db"
+mlflow.set_tracking_uri("sqlite:///mlruns.db")
 
 def run_batch_predictions():
-    print("Loading engineered features for batch scoring...")
-    df = pd.read_csv('data/processed/customer_features.csv')
+    print("Locating latest production model in MLflow Registry...")
+    experiment = mlflow.get_experiment_by_name("Telecom_Retention_Pipeline")
+    # Automatically get the most recent successful run
+    latest_run = mlflow.search_runs(
+        experiment_ids=[experiment.experiment_id], 
+        order_by=["start_time DESC"], 
+        max_results=1
+    ).iloc[0]
+    run_id = latest_run.run_id
     
-    # Keep customer_id for the final output
+    print(f"Loading Models & Encoders from Run ID: {run_id}...")
+    xgb_churn = mlflow.xgboost.load_model(f"runs:/{run_id}/churn_model")
+    xgb_clv = mlflow.xgboost.load_model(f"runs:/{run_id}/clv_model")
+    
+    # Download preprocessing artifacts dynamically
+    client = MlflowClient()
+    local_dir = client.download_artifacts(run_id, "preprocessing", ".")
+    encoders = joblib.load(f"{local_dir}/encoders.pkl")
+    feature_names = joblib.load(f"{local_dir}/feature_names.pkl")
+    
+    print("Loading data for batch scoring...")
+    df = pd.read_csv('../../elt/src/data/processed/customer_features.csv')
     customer_ids = df['customer_id']
     
-    print("Loading saved models and encoders...")
-    xgb_churn = joblib.load('model/churn_prediction/saved_models/xgboost_churn_model.pkl')
-    xgb_clv = joblib.load('model/churn_prediction/saved_models/xgboost_clv_model.pkl')
-    encoders = joblib.load('model/churn_prediction/saved_models/encoders.pkl')
-    feature_names = joblib.load('model/churn_prediction/saved_models/feature_names.pkl')
-    
-    # Prepare data for models
+    # Prepare data
     X = df.drop(columns=['customer_id', 'churn', 'clv_projected'], errors='ignore')
     for col, le in encoders.items():
         if col in X.columns:
             X[col] = le.transform(X[col])
-            
-    # Ensure column order matches training exactly
-    X = X[feature_names]
+    X = X[feature_names] # Ensure perfect column alignment
     
-    print("Generating predictions...")
-    # Get probability of churn (Class 1)
+    print("Scoring base and calculating SHAP values...")
     churn_probs = xgb_churn.predict_proba(X)[:, 1]
-    # Get predicted CLV
     clv_preds = xgb_clv.predict(X)
     
-    print("Calculating SHAP values to find the top risk factor per customer...")
-    # We use SHAP to explain exactly WHY each specific customer is at risk
     explainer = shap.TreeExplainer(xgb_churn)
     shap_values = explainer.shap_values(X)
+    top_risk_factors = [feature_names[i] for i in np.argmax(shap_values, axis=1)]
     
-    # Find the feature name with the highest SHAP value for each row
-    # This represents the biggest factor pushing them toward churning
-    top_risk_indices = np.argmax(shap_values, axis=1)
-    top_risk_factors = [feature_names[i] for i in top_risk_indices]
-    
-    print("Structuring final output table...")
     output_df = pd.DataFrame({
         'customer_id': customer_ids,
         'prediction_date': datetime.date.today(),
@@ -57,13 +62,10 @@ def run_batch_predictions():
         'top_risk_factor': top_risk_factors
     })
     
-    print("Pushing predictions to PostgreSQL database...")
+    print("Pushing to PostgreSQL...")
     engine = create_engine(DB_URI)
-    
-    # Append to the prediction_outputs table we created in Phase 1
-    output_df.to_sql('prediction_outputs', engine, if_exists='append', index=False)
-    
-    print(f"✅ Batch prediction complete! Successfully scored and saved {len(output_df)} customers.")
+    output_df.to_sql('prediction_outputs', engine, if_exists='replace', index=False)
+    print(f"✅ Batch prediction complete! Successfully scored {len(output_df)} customers.")
 
 if __name__ == "__main__":
     run_batch_predictions()

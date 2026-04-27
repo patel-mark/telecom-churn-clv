@@ -1,18 +1,25 @@
 import pandas as pd
 import numpy as np
+import os
+import joblib
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import classification_report, roc_auc_score, mean_absolute_error, mean_squared_error
+from sklearn.metrics import roc_auc_score, mean_absolute_error, mean_squared_error
 from imblearn.over_sampling import SMOTE
 from xgboost import XGBClassifier, XGBRegressor
-import joblib
-import os
+
+# -- MLFLOW IMPORTS --
+import mlflow
+import mlflow.xgboost
+import mlflow.sklearn
+
+# Set MLflow tracking to a local database
+mlflow.set_tracking_uri("sqlite:///mlruns.db")
+EXPERIMENT_NAME = "Telecom_Retention_Pipeline"
+mlflow.set_experiment(EXPERIMENT_NAME)
 
 def load_and_preprocess_data():
-    print("Loading clean, engineered features...")
-    df = pd.read_csv('data/processed/customer_features.csv')
-    
-    # Categorical columns to encode
+    df = pd.read_csv('../../elt/src/data/processed/customer_features.csv')
     categorical_cols = ['gender', 'location_region', 'contract_type']
     
     encoders = {}
@@ -21,65 +28,60 @@ def load_and_preprocess_data():
         df[col] = le.fit_transform(df[col])
         encoders[col] = le
         
-    os.makedirs('model/churn_prediction/saved_models', exist_ok=True)
-    joblib.dump(encoders, 'model/churn_prediction/saved_models/encoders.pkl')
-    
-    return df
+    # Save encoders to a temp folder so MLflow can log them as artifacts
+    os.makedirs('temp_artifacts', exist_ok=True)
+    joblib.dump(encoders, 'temp_artifacts/encoders.pkl')
+    return df, categorical_cols
 
-def train_churn_model(df):
-    print("\n--- Training Churn Model (XGBoost Classification) ---")
+def train_and_log_models():
+    df, cat_cols = load_and_preprocess_data()
     
     X = df.drop(columns=['customer_id', 'churn', 'clv_projected'])
-    y = df['churn']
+    y_churn = df['churn']
+    y_clv = df['clv_projected']
     
-    # Stratified split ensures the 22% churn rate is maintained in both train and test sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+    feature_names = X.columns.tolist()
+    joblib.dump(feature_names, 'temp_artifacts/feature_names.pkl')
     
-    print("Applying SMOTE to balance churn classes for training...")
+    X_train_c, X_test_c, y_train_c, y_test_c = train_test_split(X, y_churn, test_size=0.2, random_state=42, stratify=y_churn)
+    X_train_r, X_test_r, y_train_r, y_test_r = train_test_split(X, y_clv, test_size=0.2, random_state=42)
+    
     smote = SMOTE(random_state=42, k_neighbors=5)
-    X_train_smote, y_train_smote = smote.fit_resample(X_train, y_train)
-    
-    print("Training XGBoost Classifier...")
-    # Added slight regularization (reg_lambda) to prevent overfitting on our noisy data
-    xgb_clf = XGBClassifier(n_estimators=100, max_depth=4, learning_rate=0.05, reg_lambda=1.5, random_state=42)
-    xgb_clf.fit(X_train_smote, y_train_smote)
-    
-    y_pred = xgb_clf.predict(X_test)
-    y_proba = xgb_clf.predict_proba(X_test)[:, 1]
-    
-    print("\nClassification Report:")
-    print(classification_report(y_test, y_pred))
-    print(f"ROC-AUC Score: {roc_auc_score(y_test, y_proba):.4f}")
-    
-    joblib.dump(xgb_clf, 'model/churn_prediction/saved_models/xgboost_churn_model.pkl')
-    joblib.dump(X.columns.tolist(), 'model/churn_prediction/saved_models/feature_names.pkl')
-    print("Churn model saved!")
+    X_train_smote, y_train_smote = smote.fit_resample(X_train_c, y_train_c)
 
-def train_clv_model(df):
-    print("\n--- Training CLV Model (XGBoost Regression) ---")
-    
-    X = df.drop(columns=['customer_id', 'churn', 'clv_projected'])
-    y = df['clv_projected']
-    
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
-    print("Training XGBoost Regressor...")
-    xgb_reg = XGBRegressor(n_estimators=100, max_depth=4, learning_rate=0.05, random_state=42)
-    xgb_reg.fit(X_train, y_train)
-    
-    y_pred = xgb_reg.predict(X_test)
-    
-    mae = mean_absolute_error(y_test, y_pred)
-    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-    
-    print(f"Mean Absolute Error (MAE): KES {mae:.2f}")
-    print(f"Root Mean Squared Error (RMSE): KES {rmse:.2f}")
-    
-    joblib.dump(xgb_reg, 'model/churn_prediction/saved_models/xgboost_clv_model.pkl')
-    print("CLV model saved!")
+    # -- START MLFLOW RUN --
+    with mlflow.start_run(run_name="XGBoost_SMOTE_Run"):
+        print("Training Churn Classifier...")
+        clf_params = {'n_estimators': 100, 'max_depth': 4, 'learning_rate': 0.05, 'reg_lambda': 1.5}
+        xgb_clf = XGBClassifier(**clf_params, random_state=42)
+        xgb_clf.fit(X_train_smote, y_train_smote)
+        
+        y_proba = xgb_clf.predict_proba(X_test_c)[:, 1]
+        auc = roc_auc_score(y_test_c, y_proba)
+        
+        print("Training CLV Regressor...")
+        reg_params = {'n_estimators': 100, 'max_depth': 4, 'learning_rate': 0.05}
+        xgb_reg = XGBRegressor(**reg_params, random_state=42)
+        xgb_reg.fit(X_train_r, y_train_r)
+        
+        y_pred = xgb_reg.predict(X_test_r)
+        rmse = np.sqrt(mean_squared_error(y_test_r, y_pred))
+
+        # -- LOGGING TO REGISTRY --
+        print("Logging Models and Metrics to MLflow...")
+        mlflow.log_params({"clf_" + k: v for k, v in clf_params.items()})
+        mlflow.log_params({"reg_" + k: v for k, v in reg_params.items()})
+        mlflow.log_metric("churn_roc_auc", auc)
+        mlflow.log_metric("clv_rmse", rmse)
+        
+        # Log actual models
+        mlflow.xgboost.log_model(xgb_clf, "churn_model")
+        mlflow.xgboost.log_model(xgb_reg, "clv_model")
+        
+        # Log encoders & feature names so prediction script can use them
+        mlflow.log_artifacts("temp_artifacts", artifact_path="preprocessing")
+        
+        print(f"✅ Run Successful! ROC-AUC: {auc:.4f} | CLV RMSE: {rmse:.2f}")
 
 if __name__ == "__main__":
-    df_features = load_and_preprocess_data()
-    train_churn_model(df_features)
-    train_clv_model(df_features)
-    print("\n✅ Phase 4 Complete: Leak-Free Models trained and saved!")
+    train_and_log_models()

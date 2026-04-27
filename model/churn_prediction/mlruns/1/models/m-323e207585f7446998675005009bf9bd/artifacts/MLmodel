@@ -1,0 +1,22 @@
+artifact_path: /home/pateldjango/telecom-churn-clv/model/churn_prediction/mlruns/1/models/m-323e207585f7446998675005009bf9bd/artifacts
+flavors:
+  python_function:
+    data: model.ubj
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.xgboost
+    python_version: 3.12.3
+  xgboost:
+    code: null
+    data: model.ubj
+    model_class: xgboost.sklearn.XGBRegressor
+    model_format: ubj
+    xgb_version: 3.2.0
+mlflow_version: 3.11.1
+model_id: m-323e207585f7446998675005009bf9bd
+model_size_bytes: 165599
+model_uuid: m-323e207585f7446998675005009bf9bd
+prompts: null
+run_id: fc45b7fd963e4d2396e30dcec4efb343
+utc_time_created: '2026-04-27 14:16:21.631917'
