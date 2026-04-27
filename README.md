@@ -5,7 +5,7 @@
 > **Note:** Replace the image path below with the actual path to your Tableau dashboard screenshot.
 > Example: `![Executive Dashboard](./images/tableau_dashboard.png)`
 
-![Executive Dashboard](https://i.postimg.cc/Qd8DYMzK/telecom-dashboard-merged.png)](https://postimg.cc/F7Bw7hNh)
+![Executive Dashboard](https://i.postimg.cc/Qd8DYMzK/telecom-dashboard-merged.png)]
 
 ## 📖 Overview & Business Problem
 Telecom operators lose millions annually to preventable customer churn. The primary challenge is identifying high-value customers *before* they leave, enabling targeted retention campaigns rather than inefficient, broad-spectrum marketing. 
