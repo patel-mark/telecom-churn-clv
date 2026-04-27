@@ -15,10 +15,17 @@ This end-to-end Machine Learning and Business Intelligence pipeline transforms r
 3. **Interactive BI:** Create an analyst-friendly dashboard to track segment health, monitor model predictions, and drive executive decision-making.
 
 ## 📊 Key Executive Insights
-Based on the initial batch run of 1,000 customers, the model surfaced the following critical business intelligence:
-* **The Financial Impact:** With a baseline churn rate of 25.33%, over **KES 150,460** in projected lifetime value is actively at risk in this sample alone.
-* **Geographic Strategy:** **Nairobi** operates as a stable stronghold with high revenue and retention. Conversely, **Kiambu** and **Uasin Gishu** flash red with the highest average churn probabilities, necessitating immediate local investigation.
-* **Core Drivers of Churn:** Contrary to assumptions about network quality (dropped calls), churn is primarily behavioral. The #1 indicator of flight risk is `days_since_last_recharge`, followed by low `tenure_months`.
+1. **The Financial Impact** (The "What")
+In my analysis of this 1,000-customer cohort, I identified a baseline churn rate that is actively threatening 28.56% of total revenue. Out of a KES 15.3M portfolio, I found exactly KES 4,374,321 in projected Customer Lifetime Value (CLV) is actively at risk. To put this in perspective, scaling my model to a standard telecom base of 1 million customers exposes a potential revenue loss of over KES 4.3 Billion. I built this dashboard to provide the exact targeting capabilities required to mitigate that loss.
+
+2. **Regional Performance** (The "Where")
+I isolated Nairobi as the undisputed high-stakes hub, generating the highest total revenue (over KES 4.7M) with a massive "safe" baseline. However, my data raises a critical red flag for Mombasa. I discovered this region carries an inverted health ratio where significantly more CLV is actively at risk (~KES 648K) than safe (~KES 380K). Based on this regional breakdown, I strongly advise an investigation into the Mombasa Prepaid market to determine if a competitor has launched an aggressive local campaign in the coastal region.
+
+3. **Core Drivers of Churn** (The "Why")
+While initial assumptions often point to network quality as a churn driver, my machine learning model proved otherwise. I found that network issues and dropped calls sit at the absolute bottom of the risk factors, driving only 9 of the flagged churners. Instead, I uncovered that the churn is almost entirely behavioral. The absolute highest indicator of flight risk I identified is days_since_last_recharge, which is solely responsible for 230 of the 256 at-risk customers. My conclusion is that customers are not leaving due to bad service; they are losing the habit of topping up and slipping away due to a lack of ongoing financial engagement.
+
+4. **Strategic Action Plan** (The "How")
+To counter this behavioral drop-off, I propose an automated SMS win-back campaign targeting the Prepaid segment, which my analysis shows holds KES 3.5M of the total risk. Triggering a targeted SMS top-up bonus (e.g., "100% data bonus on your next recharge") right at a 15-day recharge drought intercepts the behavior before my model classifies the account as High Risk.
 
 ## 🏗️ Architecture & Workflow
 
