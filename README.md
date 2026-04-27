@@ -2,10 +2,7 @@
 
 ![Build Status](https://img.shields.io/badge/Status-Complete-success) ![Python](https://img.shields.io/badge/Python-3.8%2B-blue) ![Tableau](https://img.shields.io/badge/Tableau-Cloud-orange) ![Machine Learning](https://img.shields.io/badge/Model-XGBoost%20%7C%20SMOTE%20%7C%20SHAP-green)
 
-> **Note:** Replace the image path below with the actual path to your Tableau dashboard screenshot.
-> Example: `![Executive Dashboard](./images/tableau_dashboard.png)`
-
-![Executive Dashboard](https://i.postimg.cc/Qd8DYMzK/telecom-dashboard-merged.png)]
+![Executive Dashboard](https://i.postimg.cc/Qd8DYMzK/telecom-dashboard-merged.png)
 
 ## 📖 Overview & Business Problem
 Telecom operators lose millions annually to preventable customer churn. The primary challenge is identifying high-value customers *before* they leave, enabling targeted retention campaigns rather than inefficient, broad-spectrum marketing. 
@@ -25,10 +22,7 @@ Based on the initial batch run of 1,000 customers, the model surfaced the follow
 
 ## 🏗️ Architecture & Workflow
 
-> **Note:** Replace the image path below with the actual path to your Draw.io architecture flow diagram.
-> Example: `![Architecture Flow](./images/architecture_diagram.png)`
-
-![Architecture Flow](./path/to/your/architecture_flow_image.png)
+![Architecture Flow](https://i.postimg.cc/CM4nRRbJ/Telecom-Customer-Lifetime-Value-(CLV)-Churn-Prediction.webp)
 
 The pipeline is built for scalability and automated batch prediction, simulating a production environment:
 1. **Data Ingestion & Cleaning:** Raw synthesized data (CDRs, Mobile Data Usage, CRM logs) is joined and preprocessed via SQL in a PostgreSQL data warehouse.
